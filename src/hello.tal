@@ -1,0 +1,56 @@
+( hello.tal )
+
+( devices )
+|10 @Console [ &vector $2 &read $1 &pad $5 &write $1 &error $1 ]
+
+( macros )
+( prit character to standard output )
+%EMIT { .Console/write DEO } ( character -- )
+( prit a newline )
+%NL { #0a EMIT } ( -- )
+( print a digit )
+%PRINT-DIGIT { #30 ADD EMIT } ( number -- )
+
+( main program )
+|0100
+	LIT 68 LIT 18 DEO
+	LIT 65 LIT 18 DEO
+	LIT 6c LIT 18 DEO
+	LIT 6c LIT 18 DEO
+	LIT 6f LIT 18 DEO
+	LIT 0a LIT 18 DEO
+
+	#68 #18 DEO
+	#65 #18 DEO
+	#6c #18 DEO
+	#6c #18 DEO
+	#6f #18 DEO
+	#0a #18 DEO
+
+	LIT "H #18 DEO
+	LIT "E #18 DEO
+	LIT "L #18 DEO
+	LIT "L #18 DEO
+	LIT "O #18 DEO
+	#0a #18 DEO
+
+	#68 .Console/write DEO ( h )
+	#65 .Console/write DEO ( e )
+	#6c .Console/write DEO ( l )
+	#6c .Console/write DEO ( l )
+	#6f .Console/write DEO ( o )
+	#0a .Console/write DEO ( newline )
+
+	LIT "H EMIT
+	LIT "E EMIT
+	LIT "L EMIT
+	LIT "L EMIT
+	LIT "O EMIT
+	NL
+
+	#6f #6c #6c #65 #68 EMIT EMIT EMIT EMIT EMIT
+	NL
+
+	#02 PRINT-DIGIT
+	NL
+

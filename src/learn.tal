@@ -1,0 +1,184 @@
+( L E A R N  U X N )
+
+( devices )
+|00 @System  [ &vector $2 &pad $6  &r $2 &g $2 &b $2 ]
+|10 @Console [ &vector $2 &read $1 &pad $5 &write $1 &error $1 ]
+|20 @Screen  [ &vector $2 &width $2 &height $2 &pad  $2 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1 ]
+|80 @Controller [ &vector $2 &button $1 &key $1 ]
+|90 @Mouse [ &vector $2 &x $2 &y $2 &state $1 &wheel $1 ]
+
+( macros )
+%DRAW-PIXEL { #41 .Screen/pixel DEO } ( -- )
+%INC-X { .Screen/x DEI2 INC2 .Screen/x DEO2 } ( -- )
+%DRAW-LINE {	DRAW-PIXEL INC-X
+				DRAW-PIXEL INC-X
+				DRAW-PIXEL INC-X
+				DRAW-PIXEL INC-X
+				DRAW-PIXEL INC-X
+				DRAW-PIXEL
+			} ( -- )
+( %HALF { #02 DIV } ( number -- number/2 )
+%HALF2 { #0002 DIV2 } ( number -- number/2 ) )
+%HALF { #01 SFT } ( number -- number/2 )
+%HALF2 { #01 SFT2 } ( number -- number/2 )
+
+%SPRITE { .Screen/sprite DEO }
+%SPRITE2 { .Screen/sprite DEO }
+
+%INIT-X { #0000 .Screen/x DEI2 }
+%INIT-Y { #0000 .Screen/y DEI2 }
+
+%8ADD-X { .Screen/x DEI2 #0008 ADD2 .Screen/x DEO2 }
+%8SUB-X { .Screen/x DEI2 #0008 SUB2 .Screen/x DEO2 }
+%8ADD-Y { .Screen/y DEI2 #0008 ADD2 .Screen/y DEO2 }
+%8SUB-Y { .Screen/y DEI2 #0008 SUB2 .Screen/y DEO2 }
+
+%MADE-IN-RUSSIA { 
+	;r .Screen/addr DEO2
+	#85 SPRITE2
+	8ADD-X
+	;ma .Screen/addr DEO2
+	#85 SPRITE2
+	8ADD-X
+	;de- .Screen/addr DEO2
+	#0f SPRITE
+	8SUB-X 8SUB-X
+	8ADD-Y
+	;u .Screen/addr DEO2
+	#85 SPRITE2
+	8ADD-X
+	;ru .Screen/addr DEO2
+	#85 SPRITE2
+	8ADD-X
+	;ss .Screen/addr DEO2
+	#05 SPRITE
+	8ADD-X
+	;ia .Screen/addr DEO2
+	#05 SPRITE
+	8SUB-Y
+	8SUB-X 8SUB-X 8SUB-X
+	 }
+
+( main program )
+|0100 @on-reset
+	( set system colors )
+	#1c0f .System/r DEO2
+	#123f .System/g DEO2
+	#12af .System/b DEO2
+
+	INIT-X
+	INIT-Y
+
+	( DRAW-LINE
+	#0050 .Screen/y DEO2
+	DRAW-LINE )
+	( #01 .Screen/pixel DEO )
+
+	( ;logo .Screen/addr DEO2
+
+	#05 SPRITE
+	.Screen/width DEI2 HALF2 #0004 SUB2 .Screen/x DEO2
+	#05 SPRITE
+	.Screen/width DEI2 #0008 SUB2 .Screen/x DEO2
+	#05 SPRITE
+	.Screen/height DEI2 HALF2 #0004 SUB2 .Screen/y DEO2
+	#0000 .Screen/x DEO2
+	#05 SPRITE
+	.Screen/width DEI2 HALF2 #0004 SUB2 .Screen/x DEO2
+	#05 SPRITE
+	.Screen/width DEI2 #0008 SUB2 .Screen/x DEO2
+	#05 SPRITE
+	.Screen/height DEI2 #0008 SUB2 .Screen/y DEO2
+	#0000 .Screen/x DEO2
+	#05 SPRITE
+	.Screen/width DEI2 HALF2 #0004 SUB2 .Screen/x DEO2
+	#05 SPRITE
+	.Screen/width DEI2 #0008 SUB2 .Screen/x DEO2
+	#05 SPRITE )
+
+	MADE-IN-RUSSIA
+	.Screen/width DEI2 HALF2 #0008 SUB2 .Screen/x DEO2
+	MADE-IN-RUSSIA
+	.Screen/width DEI2 #0020 SUB2 .Screen/x DEO2
+	MADE-IN-RUSSIA
+	.Screen/height DEI2 HALF2 #000f SUB2 .Screen/y DEO2
+	#0000 .Screen/x DEO2
+	MADE-IN-RUSSIA
+	.Screen/width DEI2 HALF2 #0008 SUB2 .Screen/x DEO2
+	MADE-IN-RUSSIA
+	.Screen/width DEI2 #0020 SUB2 .Screen/x DEO2
+	MADE-IN-RUSSIA
+	.Screen/height DEI2 #000f SUB2 .Screen/y DEO2
+	#0000 .Screen/x DEO2
+	MADE-IN-RUSSIA
+	.Screen/width DEI2 HALF2 #0008 SUB2 .Screen/x DEO2
+	MADE-IN-RUSSIA
+	.Screen/width DEI2 #0020 SUB2 .Screen/x DEO2
+	MADE-IN-RUSSIA
+
+
+
+	( #0100 .Screen/x DEO2
+	#0080 .Screen/y DEO2
+	;brush .Screen/addr DEO2
+	#05 .Screen/sprite DEO )
+
+	( ;r .Screen/addr DEO2
+	#85 .Screen/sprite DEO
+	#0088 .Screen/y DEO2
+	;u .Screen/addr DEO2
+	#85 .Screen/sprite DEO )
+
+	  ( .Screen/y DEI2 #0010 ADD2 .Screen/y DEO2 )
+	( ;logo .Screen/addr DEO2 )
+	( #03 .Screen/sprite DEO )
+
+	( ;on-frame .Screen/vector DEO2 )
+	;on-controller .Controller/vector DEO2
+BRK
+
+
+@on-controller
+	#0048 .Screen/x DEO2
+	#0048 .Screen/y DEO2
+	;logo .Screen/addr DEO2
+	#0f SPRITE
+BRK
+
+
+@on-frame
+	;on-mouse-move .Mouse/vector DEO2
+	.Mouse/x DEI2 .Screen/x DEO2
+	.Mouse/y DEI2 .Screen/y DEO2
+	#4f .Screen/sprite DEO
+BRK
+
+
+@on-mouse-move
+	.Mouse/x DEI2 .Screen/width DEI2 HALF2 GTH2 ( if Mouse.x > Screen.width / 2 )
+	,&right JCN ( then jump to "right" sub-label )
+
+	&left
+		( LIT "L .Console/write DEO )
+		#1c0f .System/r DEO2
+		#123f .System/g DEO2
+		#12af .System/b DEO2
+		,&end JMP
+	&right
+		( LIT "R .Console/write DEO )
+		#c10f .System/r DEO2
+		#213f .System/g DEO2
+		#21af .System/b DEO2
+	&end
+		( POP2 clean stack of Mouse.x ? )
+BRK
+
+@brush ff81 8181 8181 81ff
+@logo aaaa aa28 aaaa aaaa
+@r 00ff 81b9 a524 3824	00ff 81b9 a5a5 b9a5
+@u 0024 24a5 9d81 ff00	81a5 a524 1c00 0000
+@ma 0072 7557 5500 0000	0072 7557 5500 7725
+@de- 0067 5654 6700 0000
+@ru 0000 0065 5565 5700	2575 0000 0000 0000
+@ss 0000 0033 4411 7700
+@ia 0000 0072 2527 7500

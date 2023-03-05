@@ -1,0 +1,332 @@
+( devices )
+|00 @System  [ &vector $2 &pad $6  &r $2 &g $2 &b $2 ]
+|10 @Console [ &vector $2 &read $1 &pad $5 &write $1 &error $1 ]
+|20 @Screen  [ &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1 ]
+|80 @Controller [ &vector $2 &button $1 &key $1 ]
+|90 @Mouse [ &vector $2 &x $2 &y $2 &state $1 &wheel $1 ]
+
+( variables )
+@col $1
+@adr $2
+@h $1
+@w $1
+@x $2
+@y $2
+@init-x $2
+@init-y $2
+
+( macros )
+%DRAW-PIXEL { #41 .Screen/pixel DEO } ( -- )
+%INC-X { .Screen/x DEI2 INC2 .Screen/x DEO2 } ( -- )
+%DRAW-LINE {	DRAW-PIXEL INC-X
+				DRAW-PIXEL INC-X
+				DRAW-PIXEL INC-X
+				DRAW-PIXEL INC-X
+				DRAW-PIXEL INC-X
+				DRAW-PIXEL
+			} ( -- )
+( %HALF { #02 DIV } ( number -- number/2 )
+%HALF2 { #0002 DIV2 } ( number -- number/2 ) )
+%HALF { #01 SFT } ( number -- number/2 )
+%HALF2 { #01 SFT2 } ( number -- number/2 )
+
+%CENTER-X { .Screen/width DEI2 HALF2 }
+%CENTER-Y { .Screen/height DEI2 HALF2 }
+
+%SPRITE { .Screen/sprite DEO }
+%SPRITEk { .Screen/sprite DEOk }
+( %SPRITE2 { .Screen/sprite DEO2 } )
+
+%INIT-X { #0008 .Screen/x DEO2 }
+%INIT-Y { #0008 .Screen/y DEO2 }
+
+%8ADD-X { .Screen/x DEI2 #0008 ADD2 .Screen/x DEO2 }
+%8SUB-X { .Screen/x DEI2 #0008 SUB2 .Screen/x DEO2 }
+%8ADD-Y { .Screen/y DEI2 #0008 ADD2 .Screen/y DEO2 }
+%8SUB-Y { .Screen/y DEI2 #0008 SUB2 .Screen/y DEO2 }
+%16ADD-X { 8ADD-X 8ADD-X }
+%16ADD-Y { 8ADD-Y 8ADD-Y }
+%16SUB-X { 8SUB-X 8SUB-X }
+%16SUB-Y { 8SUB-Y 8SUB-Y }
+
+( "is it a digit" check )
+%ASCII-DIGIT? { DUP #2f GTH SWP #3a LTH AND } ( byte -- flag )
+
+( main program )
+|0100 @on-reset
+	( set system colors )
+	#1c78 .System/r DEO2
+	#1b17 .System/g DEO2
+	#1923 .System/b DEO2
+
+	( Screen coords to origins )
+	INIT-X
+	INIT-Y
+
+	( Screen size )
+	#0140 .Screen/width DEO2
+	#00f0 .Screen/height DEO2
+
+	#68 .w STZ
+	#32 .h STZ
+	
+	;controller-bg .w LDZ .h LDZ
+		CENTER-X [ LIT 00 .w LDZ ] HALF SUB2
+		CENTER-Y [ LIT 00 .h LDZ ] HALF SUB2
+	#85 ;draw-bg JSR2
+	;draw-buttons JSR2
+
+	;logo .Screen/addr DEO2
+	.Screen/width DEI2 .Screen/x DEO2 16SUB-X
+	.Screen/height DEI2 .Screen/y DEO2 16SUB-Y
+	#45 SPRITE
+	( ;on-frame .Screen/vector DEO2 )
+	;on-controller .Controller/vector DEO2
+	
+BRK
+
+( @on-frame )
+@on-controller
+
+	;controller-bg .w LDZ .h LDZ
+		CENTER-X [ LIT 00 .w LDZ ] HALF SUB2
+		CENTER-Y [ LIT 00 .h LDZ ] HALF SUB2
+	#85 ;draw-bg JSR2
+
+	;draw-buttons JSR2
+( BRK
+
+@on-controller )
+	.Controller/button DEI
+	DUP #01 AND #00 EQU ,&no-a JCN
+		;hlght-a JSR2
+		&no-a
+	DUP #02 AND #00 EQU ,&no-b JCN
+		;hlght-b JSR2
+		&no-b
+	DUP #08 AND #00 EQU ,&no-start JCN
+		;hlght-start JSR2
+		&no-start
+	DUP #04 AND #00 EQU ,&no-select JCN
+		;hlght-select JSR2
+		&no-select
+	DUP #10 AND #00 EQU ,&no-up JCN
+		;hlght-up JSR2
+		&no-up
+	DUP #20 AND #00 EQU ,&no-down JCN
+		;hlght-down JSR2
+		&no-down
+	DUP #40 AND #00 EQU ,&no-left JCN
+		;hlght-left JSR2
+		&no-left
+	DUP #80 AND #00 EQU ,&no-right JCN
+		;hlght-right JSR2
+		&no-right
+	( STHr .Console/write DEOr )
+	( .col LDZ .Screen/sprite DEO
+	#02 .col STZ )
+	POP
+BRK
+
+@draw-bg ( addr* width height x* y* color -- )
+	.col STZ
+	.init-y STZ2
+	.init-x STZ2
+	.h STZ
+	.w STZ
+	.adr STZ2
+	.init-y LDZ2 .y STZ2
+	.init-x LDZ2 .x STZ2
+	.init-y LDZ2 .Screen/y DEO2
+	&loop-x
+		.x LDZ2 .init-x LDZ2 SUB2 [ LIT 00 .w LDZ #08 SUB ] GTH2 ,&loop-y JCN
+		.x LDZ2 .Screen/x DEO2
+		.adr LDZ2 .Screen/addr DEO2
+		.col LDZ SPRITE
+		.adr LDZ2 #0010 ADD2 .adr STZ2
+		.Screen/x DEI2 #0008 ADD2 .x STZ2
+		,&loop-x JMP
+		&loop-y
+			.y LDZ2 .init-y LDZ2 SUB2 [ LIT 00 .h LDZ #16 SUB ] GTH2 ,&end JCN
+			.Screen/y DEI2 #0008 ADD2 .y STZ2
+			.y LDZ2 .Screen/y DEO2
+			.init-x LDZ2 .x STZ2
+			,&loop-x JMP
+	&end
+JMP2r
+
+@draw-buttons
+	;controller-buttons/dpad-up .Screen/addr DEO2
+	CENTER-X [ LIT 00 .w LDZ ] HALF SUB2 .Screen/x DEO2
+	CENTER-Y [ LIT 00 .h LDZ ] HALF SUB2 .Screen/y DEO2
+	8ADD-X 8ADD-X 8ADD-Y
+	#08 SPRITE
+	8SUB-X 8ADD-Y
+	;controller-buttons/dpad-left .Screen/addr DEO2
+	#08 SPRITE
+	8ADD-X
+	;controller-buttons/dpad-center .Screen/addr DEO2
+	#08 SPRITE
+	8ADD-X
+	;controller-buttons/dpad-left .Screen/addr DEO2
+	#18 SPRITE
+	8SUB-X 8ADD-Y
+	;controller-buttons/dpad-up .Screen/addr DEO2
+	#28 SPRITE
+	16ADD-X 8ADD-X
+	;controller-buttons/start .Screen/addr DEO2
+	#08 SPRITE
+	16ADD-X
+	#08 SPRITE
+	16ADD-X
+	;controller-buttons/button .Screen/addr DEO2
+	#08 SPRITE
+	16ADD-X
+	#08 SPRITE
+JMP2r
+
+@hlght-up
+	CENTER-X [ LIT 00 .w LDZ ] HALF SUB2 .Screen/x DEO2
+	CENTER-Y [ LIT 00 .h LDZ ] HALF SUB2 .Screen/y DEO2
+	;controller-buttons/dpad-up .Screen/addr DEO2
+	16ADD-X 8ADD-Y
+	#05 SPRITE
+JMP2r
+
+@hlght-down
+	CENTER-X [ LIT 00 .w LDZ ] HALF SUB2 .Screen/x DEO2
+	CENTER-Y [ LIT 00 .h LDZ ] HALF SUB2 .Screen/y DEO2
+	;controller-buttons/dpad-up .Screen/addr DEO2
+	16ADD-X 16ADD-Y 8ADD-Y
+	#25 SPRITE
+JMP2r
+
+@hlght-left
+	CENTER-X [ LIT 00 .w LDZ ] HALF SUB2 .Screen/x DEO2
+	CENTER-Y [ LIT 00 .h LDZ ] HALF SUB2 .Screen/y DEO2
+	;controller-buttons/dpad-left .Screen/addr DEO2
+	8ADD-X 16ADD-Y
+	#05 SPRITE
+JMP2r
+
+@hlght-right
+	CENTER-X [ LIT 00 .w LDZ ] HALF SUB2 .Screen/x DEO2
+	CENTER-Y [ LIT 00 .h LDZ ] HALF SUB2 .Screen/y DEO2
+	;controller-buttons/dpad-left .Screen/addr DEO2
+	16ADD-X 8ADD-X 16ADD-Y
+	#15 SPRITE
+JMP2r
+
+@hlght-start
+	CENTER-X [ LIT 00 .w LDZ ] HALF SUB2 .Screen/x DEO2
+	CENTER-Y [ LIT 00 .h LDZ ] HALF SUB2 .Screen/y DEO2
+	;controller-buttons/start .Screen/addr DEO2
+	16ADD-X 16ADD-X 16ADD-X 8ADD-X 16ADD-Y 8ADD-Y
+	#05 SPRITE
+JMP2r
+
+@hlght-select
+	CENTER-X [ LIT 00 .w LDZ ] HALF SUB2 .Screen/x DEO2
+	CENTER-Y [ LIT 00 .h LDZ ] HALF SUB2 .Screen/y DEO2
+	;controller-buttons/start .Screen/addr DEO2
+	16ADD-X 16ADD-X 8ADD-X 16ADD-Y 8ADD-Y
+	#05 SPRITE
+JMP2r
+
+@hlght-a
+	CENTER-X [ LIT 00 .w LDZ ] HALF SUB2 .Screen/x DEO2
+	CENTER-Y [ LIT 00 .h LDZ ] HALF SUB2 .Screen/y DEO2
+	;controller-buttons/button .Screen/addr DEO2
+	16ADD-X 16ADD-X 16ADD-X 16ADD-X 16ADD-X 8ADD-X 16ADD-Y 8ADD-Y
+	#05 SPRITE
+JMP2r
+
+@hlght-b
+	CENTER-X [ LIT 00 .w LDZ ] HALF SUB2 .Screen/x DEO2
+	CENTER-Y [ LIT 00 .h LDZ ] HALF SUB2 .Screen/y DEO2
+	;controller-buttons/button .Screen/addr DEO2
+	16ADD-X 16ADD-X 16ADD-X 16ADD-X 8ADD-X 16ADD-Y 8ADD-Y
+	#05 SPRITE
+JMP2r
+
+
+( assets )
+@logo aaaa aa28 aaaa aaaa
+@controller-bg ( nes_bg.chr )
+	00 00 1f 3f 30 33 31 31 3f 7f ff ff f0 f3 f1 f1
+	00 00 ff ff 1f 9f 1f 1f ff ff ff ff 1f 9f 1f 1f
+	00 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+	00 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+	00 00 fe ff ff ff ff ff ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 fc fe ff ff ff ff ff ff
+	31 33 30 3f 3f 3f 3f 3f f1 f3 f0 ff ff ff ff ff
+	1f 9f 1f ff ff ff ff ff 1f 9f 1f ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+	ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 80 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	3f 3f 3f 3f 3f 3f 3f 3f ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	ff ff ff ff ff fe ff ff ff ff ff ff ff fe ff ff
+	ff ff ff ff 14 49 ff ff ff ff ff ff 14 49 ff ff
+	ff ff ff ff 3f 7e ff ff ff ff ff ff 3f 7e ff ff
+	ff ff ff ff 24 55 ff ff ff ff ff ff 24 55 ff ff
+	ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+	ff 81 38 3c 81 ff ff 81 ff 81 38 3c 81 ff ff ff
+	ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+	ff 81 3c 24 81 ff ff 81 ff 81 3c 24 81 ff ff ff
+	f8 fc fc fc fc fc fc fc ff ff ff ff ff ff ff ff
+	3f 3f 00 3f 00 3f 3f 3f ff ff c0 ff c0 ff ff ff
+	ff ff 00 ff 00 ff ff ff ff ff 00 ff 00 ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	ff ff 00 ff 00 ff ff ff ff ff 00 ff 00 ff ff ff
+	ff fe 00 fe 00 fe fe ff ff ff 01 ff 01 ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	ff 7e 00 7e 00 7e 7e ff ff ff 81 ff 81 ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	ff 7e 00 7e 00 7e 7e ff ff ff 81 ff 81 ff ff ff
+	00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff
+	fc 7c 00 7c 00 7c fc fc ff ff 83 ff 83 ff ff ff
+	3f 3f 3f 3f 3f 1f 00 00 ff ff ff ff ff ff 7f 3f
+	ff ff ff ff ff ff 00 00 ff ff ff ff ff ff ff ff
+	ff ff ff ff ff ff 00 00 ff ff ff ff ff ff ff ff
+	ff ff ff ff ff ff 00 00 ff ff ff ff ff ff ff ff
+	ff ff ff ff ff ff 00 00 ff ff ff ff ff ff ff ff
+	ff ff ff ff ff ff 00 00 ff ff ff ff ff ff ff ff
+	ff ff ff ff ff ff 00 00 ff ff ff ff ff ff ff ff
+	ff ff ff ff ff ff 00 00 ff ff ff ff ff ff ff ff
+	ff ff ff ff ff ff 00 00 ff ff ff ff ff ff ff ff
+	81 ff ff ff ff ff 00 00 ff ff ff ff ff ff ff ff
+	ff ff ff ff ff ff 00 00 ff ff ff ff ff ff ff ff
+	81 ff ff ff ff ff 00 00 ff ff ff ff ff ff ff ff
+	fc fc fc fc fc f8 00 00 ff ff ff ff ff ff fe fc
+
+@controller-buttons ( nes_btn.chr )
+	&dpad-up
+		00 00 7e 66 5a 7e 7e 7e
+	&dpad-left
+		00 3f 37 2f 2f 37 3f 00
+	&start
+		00 00 7e ff ff 7e 00 00
+	&button
+		3c 7e ff ff ff ff 7e 3c
+	&dpad-center
+		7e ff e7 c3 c3 e7 ff 7e

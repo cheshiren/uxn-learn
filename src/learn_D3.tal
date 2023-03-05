@@ -1,0 +1,174 @@
+( L E A R N  U X N )
+
+( devices )
+|00 @System  [ &vector $2 &pad $6  &r $2 &g $2 &b $2 ]
+|10 @Console [ &vector $2 &read $1 &pad $5 &write $1 &error $1 ]
+|20 @Screen  [ &vector $2 &width $2 &height $2 &pad  $2 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1 ]
+|80 @Controller [ &vector $2 &button $1 &key $1 ]
+|90 @Mouse [ &vector $2 &x $2 &y $2 &state $1 &wheel $1 ]
+
+( variables )
+@col $1
+
+( macros )
+%DRAW-PIXEL { #41 .Screen/pixel DEO } ( -- )
+%INC-X { .Screen/x DEI2 INC2 .Screen/x DEO2 } ( -- )
+%DRAW-LINE {	DRAW-PIXEL INC-X
+				DRAW-PIXEL INC-X
+				DRAW-PIXEL INC-X
+				DRAW-PIXEL INC-X
+				DRAW-PIXEL INC-X
+				DRAW-PIXEL
+			} ( -- )
+( %HALF { #02 DIV } ( number -- number/2 )
+%HALF2 { #0002 DIV2 } ( number -- number/2 ) )
+%HALF { #01 SFT } ( number -- number/2 )
+%HALF2 { #01 SFT2 } ( number -- number/2 )
+
+%CENTER-X { .Screen/width DEI2 HALF2 }
+%CENTER-Y { .Screen/height DEI2 HALF2 }
+
+%SPRITE { .Screen/sprite DEO }
+%SPRITE2 { .Screen/sprite DEO2 }
+
+%INIT-X { #0008 .Screen/x DEO2 }
+%INIT-Y { #0008 .Screen/y DEO2 }
+
+%8ADD-X { .Screen/x DEI2 #0008 ADD2 .Screen/x DEO2 }
+%8SUB-X { .Screen/x DEI2 #0008 SUB2 .Screen/x DEO2 }
+%8ADD-Y { .Screen/y DEI2 #0008 ADD2 .Screen/y DEO2 }
+%8SUB-Y { .Screen/y DEI2 #0008 SUB2 .Screen/y DEO2 }
+
+( "is it a digit" check )
+%ASCII-DIGIT? { DUP #2f GTH SWP #3a LTH AND } ( byte -- flag )
+
+( main program )
+|0100 @on-reset
+	( set system colors )
+	#1c0f .System/r DEO2
+	#123f .System/g DEO2
+	#12af .System/b DEO2
+
+	( Screen coords to origins )
+	INIT-X
+	INIT-Y
+
+	;logo .Screen/addr DEO2
+	;on-frame .Screen/vector DEO2
+	
+BRK
+
+
+@on-frame
+	.Controller/button DEI
+	DUP #02 AND #00 EQU ,&no-a JCN #01 .col STZ &no-a
+	DUP #10 AND #00 EQU ,&no-up JCN 8SUB-Y &no-up
+	DUP #20 AND #00 EQU ,&no-down JCN 8ADD-Y &no-down
+	DUP #40 AND #00 EQU ,&no-left JCN 8SUB-X &no-left
+	DUP #80 AND #00 EQU ,&no-right JCN 8ADD-X &no-right
+
+	.col LDZ .Screen/sprite DEO
+	#02 .col STZ
+	POP
+BRK
+
+
+@on-controller-1
+	( Screen X-coord to half-sprite off center )
+	CENTER-X #0004 SUB2 .Screen/x DEO2
+	( Screen Y-coord to half-sprite off center )
+	CENTER-Y #0004 SUB2 .Screen/y DEO2
+
+	( set sprite address )
+	;logo .Screen/addr DEO2
+	
+	.Controller/key DEI
+	DUP LIT "a EQU
+	,&color-a JCN
+
+	DUP LIT "s EQU
+	,&color-s JCN
+
+	DUP LIT "d EQU
+	,&color-d JCN
+
+	( .Controller/key DEI DUP DUP ( -- key key key )
+	( is key > than 29? )
+	#2f GTH ( key key key -- key key flag1 )
+	SWP ( key key flag1 -- key flag1 key )
+	( is key < than 40? )
+	#3a LTH ( key flag1 key -- key flag1 flag2 )
+	AND ( key flag1 flag2 -- key flag3 ) )
+	.Controller/key DEI DUP ASCII-DIGIT?
+	,&color JCN
+	
+	POP
+	BRK
+
+	&color-a
+		#05 SPRITE
+		POP
+	BRK
+
+	&color-s
+		#0a SPRITE
+		POP
+	BRK
+
+	&color-d
+		#0f SPRITE
+		POP
+	BRK
+
+	&color
+		( Take key, subtract 30 from it and get a digit )
+		#30 SUB
+		( output sprite with the digit color )
+		SPRITE
+	BRK
+BRK
+
+( functions )
+( To print hexadecimal numbers )
+@print ( v* -- )
+
+	SWP ,&byte JSR
+	&byte ( byte -- ) DUP #04 SFT ,&char JSR
+	&char ( char -- ) #0f AND DUP #09 GTH #27 MUL ADD #30 ADD #18 DEO
+
+JMP2r
+
+( To print an entire page of memory )
+@pmem ( addr* -- )
+
+	STH2
+	#0000
+	&l
+		#00 OVR STH2kr ADD2 LDA ,print/byte JSR
+		DUP #0f AND #0f NEQ #16 MUL #0a ADD #18 DEO
+		INC NEQk ,&l JCN
+	POP2
+	POP2r
+
+JMP2r
+
+
+@brush ff81 8181 8181 81ff
+@logo aaaa aa28 aaaa aaaa
+@r 00ff 81b9 a524 3824	00ff 81b9 a5a5 b9a5
+@u 0024 24a5 9d81 ff00	81a5 a524 1c00 0000
+@ma 0072 7557 5500 0000	0072 7557 5500 7725
+@de- 0067 5654 6700 0000
+@ru 0000 0065 5565 5700	2575 0000 0000 0000
+@ss 0000 0033 4411 7700
+@ia 0000 0072 2527 7500
+@digit0 00 3c 2c 2c 2c 2c 3c 00
+@digit1 00 38 18 18 18 18 3c 00
+@digit2 00 3c 0c 0c 30 30 3c 00
+@digit3 00 3c 0c 0c 1c 0c 3c 00
+@digit4 00 2c 2c 2c 3c 0c 0c 00
+@digit5 00 3c 30 30 0c 0c 3c 00
+@digit6 00 3c 30 3c 34 34 3c 00
+@digit7 00 3c 2c 0c 0c 0c 0c 00
+@digit8 00 3c 2c 2c 3c 2c 3c 00
+@digit9 00 3c 2c 2c 3c 0c 3c 00

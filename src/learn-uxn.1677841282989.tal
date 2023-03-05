@@ -1,0 +1,44 @@
+
+
+|00 @System     &vector $2 &wst      $1 &rst    $1 &pad    $4 &r      $2 &g      $2 &b      $2 &debug  $1 &halt $1
+|10 @Console    &vector $2 &read     $1 &pad    $5 &write  $1 &error  $1
+|20 @Screen     &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
+|30 @Audio0     &vector $2 &position $2 &output $1 &pad    $3 &adsr   $2 &length $2 &addr   $2 &volume $1 &pitch $1
+|80 @Controller &vector $2 &button   $1 &key    $1
+|90 @Mouse      &vector $2 &x        $2 &y      $2 &state  $1 &pad    $3 &modx   $2 &mody   $2
+
+%8ADD-X { .Screen/x DEI2 #0008 ADD2 .Screen/x DEO2 }
+%8SUB-X { .Screen/x DEI2 #0008 SUB2 .Screen/x DEO2 }
+%8ADD-Y { .Screen/y DEI2 #0008 ADD2 .Screen/y DEO2 }
+%8SUB-Y { .Screen/y DEI2 #0008 SUB2 .Screen/y DEO2 }
+
+|0000
+
+@col $1
+
+|0100
+
+	#0fe5 .System/r DEO2
+	#0fc5 .System/g DEO2
+	#0f25 .System/b DEO2
+
+	#0008 .Screen/x DEO2
+	#0008 .Screen/y DEO2
+	;pic .Screen/addr DEO2
+	
+	#01 .col STZ
+	;on-controller .Controller/vector DEO2 
+
+
+BRK
+
+@on-controller
+	.Controller/button DEI
+	DUP #10 AND #00 EQU ,&no-up JCN 8SUB-Y #02 .col STZ &no-up
+	DUP #20 AND #00 EQU ,&no-down JCN 8ADD-Y #03 .col STZ &no-down
+	DUP #40 AND #00 EQU ,&no-left JCN 8SUB-X #04 .col STZ &no-left
+	DUP #80 AND #00 EQU ,&no-right JCN 8ADD-X #05 .col STZ &no-right
+	.col LDZ .Screen/sprite DEO
+BRK
+
+@pic ff18 1899 9918 18ff
