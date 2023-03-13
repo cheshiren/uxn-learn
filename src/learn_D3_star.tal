@@ -52,6 +52,8 @@
 ( "is it a digit" check )
 %ASCII-DIGIT? { DUP #2f GTH SWP #3a LTH AND } ( byte -- flag )
 
+%BREAKPOINT { #0101 #0e DEO2 }
+
 ( main program )
 |0100 @on-reset
 	( set system colors )
@@ -191,6 +193,7 @@ JMP2r
 	;controller-buttons/dpad-up .Screen/addr DEO2
 	16ADD-X 8ADD-Y
 	#05 SPRITE
+	( BREAKPOINT )
 JMP2r
 
 @hlght-down
